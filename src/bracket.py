@@ -11,7 +11,7 @@ from json import JSONDecodeError
 from bs4 import BeautifulSoup
 from pydantic import BaseModel, ValidationError
 
-from common import data_dir, data_dir_assert
+from common import data_dir, data_dir_assert, get_or_download_path
 
 BRACKET_URL_FORMAT = 'https://fantasy.espn.com/tournament-challenge-bracket/{}/en/bracket'
 BRACKET_RAW_FILENAME = 'bracket.html'
@@ -114,20 +114,7 @@ def compute_next_match_index(index):
     return (int(result), teams_in_round)
 
 def get_raw_bracket_path(year, force=False):
-    raw_bracket_path = os.path.join(data_dir(year), BRACKET_RAW_FILENAME)
-    if not os.path.isfile(raw_bracket_path) or force:
-        download_bracket(year)
-    return raw_bracket_path
-
-def download_bracket(year):
-    data_dir = data_dir_assert(year)
-    result = requests.get(url = bracket_url(year))
-    if result.ok:
-        path = os.path.join(data_dir, BRACKET_RAW_FILENAME)
-        with open(path, 'w') as bracket_file:
-            print(result.text, file=bracket_file)
-    else:
-        raise Exception('Failed to download bracket with status code: {}'.format(result.status_code))
+    return get_or_download_path(year, bracket_url(year), BRACKET_RAW_FILENAME, force)
     
 def bracket_url(year):
     return BRACKET_URL_FORMAT.format(year)
