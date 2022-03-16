@@ -1,17 +1,14 @@
 #!/usr/bin/env python
 
 import json
-import os.path
-import requests
 
-from collections import namedtuple
 from typing import List, Optional, Dict
 from json import JSONDecodeError
 
 from bs4 import BeautifulSoup
 from pydantic import BaseModel, ValidationError
 
-from common import data_dir, data_dir_assert, get_or_download_path
+from common import get_or_download_path, get_transform
 
 BRACKET_URL_FORMAT = 'https://fantasy.espn.com/tournament-challenge-bracket/{}/en/bracket'
 BRACKET_RAW_FILENAME = 'bracket.html'
@@ -45,20 +42,18 @@ class Bracket(BaseModel):
     matches: Dict[int, Match]
     teams: Dict[int, Team]
 
-def get_bracket(year, force_parse=False, force_download=False) -> Bracket:
-    bracket_path = os.path.join(data_dir(year), BRACKET_FILENAME)
-    if os.path.isfile(bracket_path) and not force_parse and not force_download:
-        try:
-            with open(bracket_path) as file:
-                data = json.load(file)
-                return Bracket(**data)
-        except (FileNotFoundError, PermissionError, JSONDecodeError, ValidationError) as ex:
-            pass # TODO log error
-    raw_path = get_raw_bracket_path(year, force=force_download)
-    result = parse_raw_bracket(raw_path)
-    with open(bracket_path, 'w') as file:
-        json.dump(result.dict(), file, indent=2)
-    return result
+def get_bracket(year, force_transform=False, force_fetch=False) -> Bracket:
+    return get_transform(
+        year=year, 
+        filename=BRACKET_FILENAME,
+        raw_func=get_raw_bracket_path,
+        transform_func=parse_raw_bracket,
+        load_func=lambda fp: Bracket(**json.load(fp)),
+        save_func=lambda fp, result: json.dump(result.dict(), fp, indent=2),
+        load_exceptions=[JSONDecodeError, ValidationError],
+        force_transform=force_transform,
+        force_fetch=force_fetch,
+    )
 
 def parse_raw_bracket(path):
     with open(path) as file:

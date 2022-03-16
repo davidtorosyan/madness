@@ -1,12 +1,15 @@
 #!/usr/bin/env python
 
+import json
 import urllib.parse
 
 from typing import Dict, List, Tuple, Optional
+from json import JSONDecodeError
+
 from bs4 import BeautifulSoup
 
 from bracket import Team
-from common import data_dir, data_dir_assert, get_or_download_path
+from common import get_transform, get_or_download_path
 
 STATS_HOME_URL = 'https://www.cbssports.com/college-basketball/teams/'
 STATS_HOME_FILENAME = 'stats_home.html'
@@ -25,8 +28,25 @@ NAME_OVERRIDES = {
     'J\'Ville St': 'Jacksonville State Gamecocks',
 }
 
-def stat_urls(year: int, teams: List[Team]) -> Dict[int, str]:
-    path = get_stats_home_path(year)
+def get_stat_urls(
+        year, 
+        teams: List[Team], 
+        force_transform=False, 
+        force_fetch=False,
+    ) -> Dict[int, str]:
+    return get_transform(
+        year=year, 
+        filename=STATS_URLS_FILENAME,
+        raw_func=get_stats_home_path,
+        transform_func=lambda path: parse_stat_urls(path, teams),
+        load_func=lambda fp: json.load(fp),
+        save_func=lambda fp, result: json.dump(result, fp, indent=2),
+        load_exceptions=[JSONDecodeError],
+        force_transform=force_transform,
+        force_fetch=force_fetch,
+    )
+
+def parse_stat_urls(path: str, teams: List[Team]) -> Dict[int, str]:
     urls = parse_urls(path)
     return {t.index: find_url(t, urls) for t in teams}
 
