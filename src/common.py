@@ -1,10 +1,13 @@
+import json
 import os.path
 import requests
 
+from json import JSONDecodeError
 from pathlib import Path
-from typing import Callable, List, Type, TypeVar, TextIO
+from typing import Any, Callable, List, Type, TypeVar, TextIO
 
 from appdirs import AppDirs
+from pydantic import BaseModel, ValidationError
 
 APP_NAME = 'madness'
 APP_AUTHOR = 'davidtorosyan'
@@ -29,16 +32,41 @@ def get_or_download_path(year: int, url: str, filename: str, force=False):
     return path
 
 def download_path(year, url, filename):
-    data_dir = data_dir_assert(year)
+    path = os.path.join(data_dir(year), filename)
+    prepare_path(path, is_file=True)
     result = requests.get(url = url)
     if result.ok:
-        path = os.path.join(data_dir, filename)
         with open(path, 'w') as file:
             print(result.text, file=file)
     else:
         raise Exception('Failed to download {} with status code: {}'.format(url, result.status_code))
 
+def prepare_path(path, is_file=False):
+    dir = Path(path).parent if is_file else Path(path)
+    dir.mkdir(parents=True, exist_ok=True)
+    
 T = TypeVar('T')
+
+def get_transform_typed(
+        year: int, 
+        filename: str, 
+        raw_func: Callable[[int, bool], str],
+        transform_func: Callable[[str], T],
+        load_func: Callable[[Any], T],
+        force_transform=False, 
+        force_fetch=False,
+    ) -> T:
+    return get_transform(
+        year=year, 
+        filename=filename,
+        raw_func=raw_func,
+        transform_func=transform_func,
+        load_func=lambda fp: load_func(**json.load(fp)),
+        save_func=lambda fp, result: json.dump(result.dict(), fp, indent=2),
+        load_exceptions=[JSONDecodeError, ValidationError],
+        force_transform=force_transform,
+        force_fetch=force_fetch,
+    )
 
 def get_transform(
         year: int, 

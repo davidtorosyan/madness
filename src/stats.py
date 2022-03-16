@@ -7,13 +7,15 @@ from typing import Dict, List, Tuple, Optional
 from json import JSONDecodeError
 
 from bs4 import BeautifulSoup
+from pydantic import BaseModel
 
 from bracket import Team
-from common import get_transform, get_or_download_path
+from common import get_transform_typed, get_or_download_path
 
 STATS_HOME_URL = 'https://www.cbssports.com/college-basketball/teams/'
 STATS_HOME_FILENAME = 'stats_home.html'
 STATS_URLS_FILENAME = 'stats_urls.json'
+STATS_TEAM_FORMAT = 'teams/{}.html'
 
 NAME_OVERRIDES = {
     'UConn': 'Connecticut Huskies',
@@ -28,27 +30,37 @@ NAME_OVERRIDES = {
     'J\'Ville St': 'Jacksonville State Gamecocks',
 }
 
+class StatUrls(BaseModel):
+    urls: Dict[int, str]
+
+def parse_stats(path: str):
+    return path
+
+def get_stats(year: int, url: str, abbrev: str, force=False) -> str:
+    filename = STATS_TEAM_FORMAT.format(abbrev)
+    return get_or_download_path(year, url, filename, force)
+
 def get_stat_urls(
         year, 
         teams: List[Team], 
         force_transform=False, 
         force_fetch=False,
     ) -> Dict[int, str]:
-    return get_transform(
+    return get_transform_typed(
         year=year, 
         filename=STATS_URLS_FILENAME,
         raw_func=get_stats_home_path,
         transform_func=lambda path: parse_stat_urls(path, teams),
-        load_func=lambda fp: json.load(fp),
-        save_func=lambda fp, result: json.dump(result, fp, indent=2),
-        load_exceptions=[JSONDecodeError],
+        load_func=StatUrls,
         force_transform=force_transform,
         force_fetch=force_fetch,
     )
 
-def parse_stat_urls(path: str, teams: List[Team]) -> Dict[int, str]:
+def parse_stat_urls(path: str, teams: List[Team]) -> StatUrls:
     urls = parse_urls(path)
-    return {t.index: find_url(t, urls) for t in teams}
+    return StatUrls(
+        urls = {t.index: find_url(t, urls) for t in teams},
+    )
 
 def find_url(team: Team, urls: List[Tuple[str, str]]) -> str:
     override = NAME_OVERRIDES.get(team.name, None)

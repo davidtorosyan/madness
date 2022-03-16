@@ -1,14 +1,11 @@
 #!/usr/bin/env python
 
-import json
-
 from typing import List, Optional, Dict
-from json import JSONDecodeError
 
 from bs4 import BeautifulSoup
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel
 
-from common import get_or_download_path, get_transform
+from common import get_or_download_path, get_transform_typed
 
 BRACKET_URL_FORMAT = 'https://fantasy.espn.com/tournament-challenge-bracket/{}/en/bracket'
 BRACKET_RAW_FILENAME = 'bracket.html'
@@ -43,14 +40,12 @@ class Bracket(BaseModel):
     teams: Dict[int, Team]
 
 def get_bracket(year, force_transform=False, force_fetch=False) -> Bracket:
-    return get_transform(
+    return get_transform_typed(
         year=year, 
         filename=BRACKET_FILENAME,
         raw_func=get_raw_bracket_path,
         transform_func=parse_raw_bracket,
-        load_func=lambda fp: Bracket(**json.load(fp)),
-        save_func=lambda fp, result: json.dump(result.dict(), fp, indent=2),
-        load_exceptions=[JSONDecodeError, ValidationError],
+        load_func=Bracket,
         force_transform=force_transform,
         force_fetch=force_fetch,
     )
