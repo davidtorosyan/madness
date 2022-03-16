@@ -6,9 +6,10 @@ import requests
 
 from collections import namedtuple
 from typing import List, Optional, Dict
+from json import JSONDecodeError
 
 from bs4 import BeautifulSoup
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from common import data_dir, data_dir_assert
 
@@ -28,6 +29,7 @@ def matches_per_round():
 EXPECTED_MATCHES_PER_ROUND = matches_per_round()
 
 class Team(BaseModel):
+    index: int
     name: str
     abbrev: str
     seed: int
@@ -35,24 +37,27 @@ class Team(BaseModel):
 class Match(BaseModel):
     index: int
     location: str
-    teams: List[Team]
+    teams: List[int]
     teams_in_round: int
     next_match_index: Optional[int]
 
 class Bracket(BaseModel):
     matches: Dict[int, Match]
+    teams: Dict[int, Team]
 
 def get_bracket(year, force_parse=False, force_download=False) -> Bracket:
     bracket_path = os.path.join(data_dir(year), BRACKET_FILENAME)
-    if not os.path.isfile(bracket_path) or force_parse or force_download:
-        raw_path = get_raw_bracket_path(year, force=force_download)
-        result = parse_raw_bracket(raw_path)
-        with open(bracket_path, 'w') as file:
-            json.dump(result.dict(), file, indent=2)
-    else:
-        with open(bracket_path) as file:
-            data = json.load(file)
-        result = Bracket(**data)
+    if os.path.isfile(bracket_path) and not force_parse and not force_download:
+        try:
+            with open(bracket_path) as file:
+                data = json.load(file)
+                return Bracket(**data)
+        except (FileNotFoundError, PermissionError, JSONDecodeError, ValidationError) as ex:
+            pass # TODO log error
+    raw_path = get_raw_bracket_path(year, force=force_download)
+    result = parse_raw_bracket(raw_path)
+    with open(bracket_path, 'w') as file:
+        json.dump(result.dict(), file, indent=2)
     return result
 
 def parse_raw_bracket(path):
@@ -60,25 +65,30 @@ def parse_raw_bracket(path):
         soup = BeautifulSoup(file, features='html.parser')
     wrapper = soup.find(class_ = 'bracketWrapper')
     matchups = wrapper.find_all(class_ = 'matchup')
-    parsed = [parse_matchup(m) for m in matchups]
+    all_teams = []
+    parsed = [parse_matchup(m, all_teams) for m in matchups]
     return Bracket(
         matches = {m.index: m for m in parsed},
+        teams = {t.index: t for t in all_teams},
     )
 
-def parse_matchup(soup):
+def parse_matchup(soup, all_teams: List[Team]):
     teams = soup.find_all(class_ = 'actual')
+    parsed_teams = [parse_team(t) for t in teams]
+    all_teams.extend(parsed_teams)
     index = int(soup['data-index'])
     next_match_index, teams_in_round = compute_next_match_index(index)
     return Match(
         location = soup['data-location'], 
         index = index,
-        teams = [parse_team(t) for t in teams],
+        teams = [t.index for t in parsed_teams],
         teams_in_round = teams_in_round,
         next_match_index = next_match_index,
     )
 
 def parse_team(soup):
     return Team(
+        index = soup.parent['data-slotindex'],
         name = soup.find(class_= 'name').text, 
         abbrev = soup.find(class_= 'abbrev').text, 
         seed = soup.find(class_= 'seed').text,
