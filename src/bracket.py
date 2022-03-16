@@ -5,7 +5,7 @@ import os.path
 import requests
 
 from collections import namedtuple
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 from bs4 import BeautifulSoup
 from pydantic import BaseModel
@@ -14,6 +14,7 @@ from common import data_dir, data_dir_assert
 
 BRACKET_URL_FORMAT = 'https://fantasy.espn.com/tournament-challenge-bracket/{}/en/bracket'
 BRACKET_RAW_FILENAME = 'bracket.html'
+BRACKET_FILENAME = 'bracket.json'
 EXPECTED_NUM_TEAMS = 64
 
 def matches_per_round():
@@ -38,14 +39,31 @@ class Match(BaseModel):
     teams_in_round: int
     next_match_index: Optional[int]
 
-def parse_raw_bracket(year):
-    path = get_raw_bracket_path(year)
+class Bracket(BaseModel):
+    matches: Dict[int, Match]
+
+def get_bracket(year, force_parse=False, force_download=False) -> Bracket:
+    bracket_path = os.path.join(data_dir(year), BRACKET_FILENAME)
+    if not os.path.isfile(bracket_path) or force_parse or force_download:
+        raw_path = get_raw_bracket_path(year, force=force_download)
+        result = parse_raw_bracket(raw_path)
+        with open(bracket_path, 'w') as file:
+            json.dump(result.dict(), file, indent=2)
+    else:
+        with open(bracket_path) as file:
+            data = json.load(file)
+        result = Bracket(**data)
+    return result
+
+def parse_raw_bracket(path):
     with open(path) as file:
         soup = BeautifulSoup(file, features='html.parser')
     wrapper = soup.find(class_ = 'bracketWrapper')
     matchups = wrapper.find_all(class_ = 'matchup')
     parsed = [parse_matchup(m) for m in matchups]
-    return parsed
+    return Bracket(
+        matches = {m.index: m for m in parsed},
+    )
 
 def parse_matchup(soup):
     teams = soup.find_all(class_ = 'actual')
@@ -85,7 +103,7 @@ def compute_next_match_index(index):
     teams_in_round = num_matches_in_round * 2
     return (int(result), teams_in_round)
 
-def get_raw_bracket_path(year, force = False):
+def get_raw_bracket_path(year, force=False):
     raw_bracket_path = os.path.join(data_dir(year), BRACKET_RAW_FILENAME)
     if not os.path.isfile(raw_bracket_path) or force:
         download_bracket(year)
