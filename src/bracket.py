@@ -1,18 +1,29 @@
 #!/usr/bin/env python
 
+import json
 import os.path
 import requests
 
 from collections import namedtuple
+from typing import List
 
 from bs4 import BeautifulSoup
+from pydantic import BaseModel
+
 from common import data_dir, data_dir_assert
 
 BRACKET_URL_FORMAT = 'https://fantasy.espn.com/tournament-challenge-bracket/{}/en/bracket'
 BRACKET_RAW_FILENAME = 'bracket.html'
 
-Match = namedtuple('Match', ['left', 'right', 'location', 'index'])
-Team = namedtuple('Team', ['name', 'abbrev', 'seed'])
+class Team(BaseModel):
+    name: str
+    abbrev: str
+    seed: int
+
+class Match(BaseModel):
+    location: str
+    index: int
+    teams: List[Team]
 
 def parse_raw_bracket(year):
     path = get_raw_bracket_path(year)
@@ -25,20 +36,18 @@ def parse_raw_bracket(year):
 
 def parse_matchup(soup):
     teams = soup.find_all(class_ = 'actual')
-    if teams:
-        left = parse_team(teams[0])
-        right = parse_team(teams[1])
-    else:
-        left = right = None
-    location = soup['data-location']
-    index = soup['data-index']
-    return Match(left, right, location, index)
+    return Match(
+        location = soup['data-location'], 
+        index = soup['data-index'],
+        teams = [parse_team(t) for t in teams]
+    )
 
 def parse_team(soup):
-    name = soup.find(class_= 'name').text
-    abbrev = soup.find(class_= 'abbrev').text
-    seed = soup.find(class_= 'seed').text
-    return Team(name, abbrev, seed)
+    return Team(
+        name = soup.find(class_= 'name').text, 
+        abbrev = soup.find(class_= 'abbrev').text, 
+        seed = soup.find(class_= 'seed').text,
+    )
 
 def get_raw_bracket_path(year, force = False):
     raw_bracket_path = os.path.join(data_dir(year), BRACKET_RAW_FILENAME)
