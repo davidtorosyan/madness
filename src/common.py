@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Callable, List, Type, TypeVar, TextIO
 
 from appdirs import AppDirs
-from pydantic import BaseModel, ValidationError
+from pydantic import ValidationError
 
 APP_NAME = 'madness'
 APP_AUTHOR = 'davidtorosyan'
