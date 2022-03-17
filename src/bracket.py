@@ -35,10 +35,12 @@ class Match(BaseModel):
     teams: List[int]
     teams_in_round: int
     next_match_index: Optional[int]
+    winner: Optional[int] = None
 
 class Bracket(BaseModel):
     matches: Dict[int, Match]
     teams: Dict[int, Team]
+    winner: Optional[int] = None
 
 def get_bracket(year, force_transform=False, force_fetch=False) -> Bracket:
     return get_transform_typed(

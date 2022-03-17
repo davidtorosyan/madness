@@ -3,7 +3,7 @@ from statistics import mean
 from summary import Summary, Player
 from common import get_transform_typed
 
-from typing import Callable, List, Tuple
+from typing import Callable, List
 
 from pydantic import BaseModel
 
@@ -12,6 +12,7 @@ DEFAULT_HEIGHT_INCHES = 72
 DEFAULT_WEIGHT_POUNDS = 200
 DEFAULT_PERCENTAGE = 20
 MINUTES_IN_GAME = 40
+INJURY_PENALTY = -50
 
 class Score(BaseModel):
     strength: int
@@ -45,7 +46,7 @@ def get_analysis(
         filename=ANALYSIS_FILENAME,
         raw_func=lambda y,force=False: None,
         transform_func=lambda s: score_teams(teams),
-        load_func=Summary,
+        load_func=Analysis,
         force_transform=force_transform,
     )
 
@@ -91,7 +92,8 @@ def score_player(player: Player) -> PlayerScore:
             ),
             constitution = int(
                 player.stats.defense.blocks_per_game * 
-                (player.info.weight_pounds or DEFAULT_WEIGHT_POUNDS)
+                (player.info.weight_pounds or DEFAULT_WEIGHT_POUNDS) +
+                (INJURY_PENALTY if player.injury else 0)
             ),
             intelligence = int(
                 score_intelligence(player.info.school_class)

@@ -7,6 +7,7 @@ from stats import get_stats_for_team
 from roster import get_roster_for_team
 from home import get_team_urls, TeamInfo
 from analysis import get_analysis
+from tourney import get_tourney_results
 
 from typing import List
 
@@ -15,7 +16,8 @@ def main():
     year = DEFAULT_YEAR
     bracket = get_bracket(year)
     summaries = get_summaries_for_bracket(year, bracket)
-    print(get_analysis(year, summaries, force_transform=True))
+    # print(get_analysis(year, summaries, force_transform=True))
+    print(get_tourney_results(year, bracket, summaries, force_transform=True))
 
 def get_summaries_for_bracket(
     year: int,
