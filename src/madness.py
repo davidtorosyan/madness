@@ -16,13 +16,14 @@ from typing import List
 RESULTS_FILENAME = 'results.txt'
 
 def main():
-    print('Hello, world!')
+    print('Running tournament!')
     year = DEFAULT_YEAR
     bracket = get_bracket(year)
     summaries = get_summaries_for_bracket(year, bracket)
-    # print(get_analysis(year, summaries, force_transform=True))
-    result = get_tourney_results(year, bracket, summaries, force_transform=False)
+    analysis = get_analysis(year, summaries, force_transform=True)
+    result = get_tourney_results(year, bracket, summaries, force_transform=True)
     save_bracket(year, result)
+    print('Done!')
 
 def save_bracket(year: int, result: Bracket):
     pretty = pretty_bracket(result)

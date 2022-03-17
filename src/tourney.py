@@ -3,6 +3,7 @@ from tkinter import SEPARATOR
 from bracket import Team, Bracket, Match, EXPECTED_MATCHES_PER_ROUND, EXPECTED_NUM_TEAMS
 from summary import Summary
 from common import get_transform_typed
+from analysis import Score, TeamScore, score_teams
 
 from typing import Dict, List
 
@@ -42,7 +43,25 @@ def run_tourney(bracket: Bracket, summaries: List[Summary]) -> Bracket:
     )
 
 def play_match(match: Match, teams: Dict[int, Summary]):
-    return match.teams[0]
+    analysis = score_teams([teams[t] for t in match.teams], match.location)
+    return choose_winner(analysis.teams[0], analysis.teams[1]).index
+
+def choose_winner(left: TeamScore, right: TeamScore) -> TeamScore:
+    counter = 0
+    counter += 1 if left.score.strength > right.score.strength else -1
+    counter += 1 if left.score.dexterity > right.score.dexterity else -1
+    counter += 1 if left.score.constitution > right.score.constitution else -1
+    counter += 1 if left.score.intelligence > right.score.intelligence else -1
+    counter += 1 if left.score.wisdom > right.score.wisdom else -1
+    counter += 1 if left.score.charisma > right.score.charisma else -1
+    if counter > 0:
+        return left
+    elif counter < 0:
+        return right
+    elif left.score.power >= right.score.power:
+        return left
+    else:
+        return right
 
 def pretty_bracket(bracket: Bracket) -> str:
     rows = EXPECTED_NUM_TEAMS*2

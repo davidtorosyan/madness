@@ -3,7 +3,7 @@ from statistics import mean
 from summary import Summary, Player
 from common import get_transform_typed
 
-from typing import Callable, List
+from typing import Callable, List, Optional
 
 from pydantic import BaseModel
 
@@ -13,6 +13,7 @@ DEFAULT_WEIGHT_POUNDS = 200
 DEFAULT_PERCENTAGE = 20
 MINUTES_IN_GAME = 40
 INJURY_PENALTY = -50
+HOMETOWN_MULTIPLIER = 5
 
 class Score(BaseModel):
     strength: int
@@ -21,6 +22,7 @@ class Score(BaseModel):
     intelligence: int
     wisdom: int
     charisma: int
+    power: int
 
 class PlayerScore(BaseModel):
     name: str
@@ -28,6 +30,7 @@ class PlayerScore(BaseModel):
     minutes: int
 
 class TeamScore(BaseModel):
+    index: int
     name: str
     seed: int
     score: Score
@@ -50,15 +53,16 @@ def get_analysis(
         force_transform=force_transform,
     )
 
-def score_teams(teams: List[Summary]) -> Analysis:
+def score_teams(teams: List[Summary], location: Optional[str] = None) -> Analysis:
     return Analysis(
-        teams = [score_team(s) for s in teams]
+        teams = [score_team(s, location) for s in teams]
     )
 
-def score_team(team: Summary) -> TeamScore:
+def score_team(team: Summary, location: Optional[str]) -> TeamScore:
     players = [p for p in team.players if p.stats]
-    player_scores = [score_player(p) for p in players]
+    player_scores = [score_player(p, location) for p in players]
     return TeamScore(
+        index = team.team.index,
         name = team.team.name,
         seed = team.team.seed,
         score = combine_scores(player_scores),
@@ -75,9 +79,10 @@ def combine_scores(players: List[PlayerScore]) -> Score:
         intelligence = combine_stat(lambda p: p.score.intelligence),
         wisdom = combine_stat(lambda p: p.score.wisdom),
         charisma = combine_stat(lambda p: p.score.charisma),
+        power = combine_stat(lambda p: p.score.power),
     )
 
-def score_player(player: Player) -> PlayerScore:
+def score_player(player: Player, location: Optional[str]) -> PlayerScore:
     return PlayerScore(
         name = player.name,
         score = Score(
@@ -105,8 +110,13 @@ def score_player(player: Player) -> PlayerScore:
             ),
             charisma = int(
                 (player.stats.scoring.free_throw_percentage or DEFAULT_PERCENTAGE) *
-                player.stats.assists.assists_per_game
+                player.stats.assists.assists_per_game *
+                (HOMETOWN_MULTIPLIER if location and player.info.hometown == location else 1)
             ),
+            power = int(
+                (player.info.height_inches or DEFAULT_HEIGHT_INCHES) *
+                (player.info.weight_pounds or DEFAULT_WEIGHT_POUNDS)
+            )
         ),
         minutes = player.stats.overall.minutes_per_game,
     )
