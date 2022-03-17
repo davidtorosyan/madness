@@ -21,7 +21,7 @@ DEFAULT_YEAR = 2022
 def data_dir(year):
     return os.path.join(DATA_DIR, str(year))
 
-def data_dir_assert(year):
+def data_dir_assert(year: int) -> str:
     path = data_dir(year)
     Path(path).mkdir(parents=True, exist_ok=True)
     return path

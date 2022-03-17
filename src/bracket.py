@@ -34,6 +34,7 @@ class Match(BaseModel):
     location: str
     teams: List[int]
     teams_in_round: int
+    round: int
     next_match_index: Optional[int]
     winner: Optional[int] = None
 
@@ -70,12 +71,13 @@ def parse_matchup(soup, all_teams: List[Team]):
     parsed_teams = [parse_team(t) for t in teams]
     all_teams.extend(parsed_teams)
     index = int(soup['data-index'])
-    next_match_index, teams_in_round = compute_next_match_index(index)
+    next_match_index, teams_in_round, round = compute_next_match_index(index)
     return Match(
         location = soup['data-location'], 
         index = index,
         teams = [t.index for t in parsed_teams],
         teams_in_round = teams_in_round,
+        round = round,
         next_match_index = next_match_index,
     )
 
@@ -98,7 +100,7 @@ def compute_next_match_index(index):
         curr -= num_matches_in_round
         round += 1
         if round >= len(EXPECTED_MATCHES_PER_ROUND) - 1:
-            return (None, 1)
+            return (None, 1, round)
         num_matches_in_round = EXPECTED_MATCHES_PER_ROUND[round]
         total_matches += num_matches_in_round
     ratio = curr / num_matches_in_round
@@ -106,7 +108,7 @@ def compute_next_match_index(index):
     place_in_next_round = ratio * matches_in_next_round
     result = total_matches + place_in_next_round
     teams_in_round = num_matches_in_round * 2
-    return (int(result), teams_in_round)
+    return (int(result), teams_in_round, round)
 
 def get_raw_bracket_path(year, force=False):
     return get_or_download_path(year, bracket_url(year), BRACKET_RAW_FILENAME, force)
