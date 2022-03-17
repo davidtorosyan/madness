@@ -17,12 +17,8 @@ STATS_URLS_FILENAME = 'stats_urls.json'
 
 NAME_OVERRIDES = {
     'UConn': 'Connecticut Huskies',
-    'RUTG/ND': 'Rutgers Scarlet Knights',
     'CSU Fullerton': 'Cal State Fullerton Titans',
-    'WYO/IU': 'Wyoming Cowboys',
     'Saint Peter\'s': 'St. Peter\'s Peacocks',
-    'WRST/BRY': 'Bryant Bulldogs',
-    'TXSO/TCC': 'Texas Southern Tigers',
     'S Dakota St': 'South Dakota State Jackrabbits',
     'USC': 'Southern California Trojans',
     'J\'Ville St': 'Jacksonville State Gamecocks',
