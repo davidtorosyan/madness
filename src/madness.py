@@ -21,7 +21,7 @@ def main():
     bracket = get_bracket(year)
     summaries = get_summaries_for_bracket(year, bracket)
     analysis = get_analysis(year, summaries)
-    result = get_tourney_results(year, bracket, summaries)
+    result = get_tourney_results(year, bracket, summaries, force_transform=True)
     save_bracket(year, result)
     print('Done!')
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Tuple
 
 from bs4 import BeautifulSoup
 from pydantic import BaseModel
@@ -39,9 +39,10 @@ class Match(BaseModel):
     winner: Optional[int] = None
 
 class Bracket(BaseModel):
+    winner: Optional[int] = None
+    final_score: Optional[List[int]]
     matches: Dict[int, Match]
     teams: Dict[int, Team]
-    winner: Optional[int] = None
 
 def get_bracket(year, force_transform=False, force_fetch=False) -> Bracket:
     return get_transform_typed(

@@ -28,6 +28,7 @@ def run_tourney(bracket: Bracket, summaries: List[Summary]) -> Bracket:
     matches = bracket.matches.copy()
     teams = {s.team.index:s for s in summaries}
     overall_winner = None
+    final_score = None
     for match in matches.values():
         winner = play_match(match, teams)
         match.winner = winner
@@ -36,11 +37,19 @@ def run_tourney(bracket: Bracket, summaries: List[Summary]) -> Bracket:
             next_match.teams.append(winner)
         else:
             overall_winner = winner
+            final_score = get_final_score(match, teams)
     return Bracket(
         matches = matches,
         teams = bracket.teams,
         winner = overall_winner,
+        final_score = final_score,
     )
+
+def get_final_score(match: Match, teams: Dict[int, Summary]) -> List[int]:
+    return [get_score(teams[t]) for t in match.teams]
+
+def get_score(summary: Summary):
+    return sum([p.stats.scoring.points_per_game for p in summary.players if p.stats])
 
 def play_match(match: Match, teams: Dict[int, Summary]):
     analysis = score_teams([teams[t] for t in match.teams], match.location)
