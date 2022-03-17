@@ -1,4 +1,5 @@
 import json
+from operator import is_
 import os.path
 import requests
 
@@ -93,6 +94,7 @@ def get_transform(
                 raise
     raw_path = raw_func(year, force=force_fetch)
     result = transform_func(raw_path)
+    prepare_path(path, is_file=True)
     with open(path, 'w') as file:
         save_func(file, result)
     return result

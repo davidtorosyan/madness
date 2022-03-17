@@ -41,7 +41,7 @@ def get_stats_for_team(
         info: TeamInfo,
         force_transform=False, 
         force_fetch=False,
-    ) -> Dict[int, str]:
+    ) -> StatsPage:
     filename = STATS_TEAM_FORMAT.format(team.abbrev)
     url = info.urls[team.index].stats
     return get_transform_typed(
