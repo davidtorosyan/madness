@@ -44,12 +44,12 @@ def get_roster_for_team(
         force_transform=False, 
         force_fetch=False,
     ) -> Dict[int, str]:
-    filename = ROSTER_TEAM_FORMAT.format(team.abbrev)
+    filename = ROSTER_TEAM_FORMAT.format(team.safe_abbrev)
     url = info.urls[team.index].roster
     return get_transform_typed(
         year=year, 
         filename=filename,
-        raw_func=lambda y,force=False: get_roster_raw(y, url, team.abbrev, force),
+        raw_func=lambda y,force=False: get_roster_raw(y, url, team.safe_abbrev, force),
         transform_func=parse_roster,
         load_func=RosterPage,
         force_transform=force_transform,
@@ -95,6 +95,6 @@ def parse_player(soup: BeautifulSoup) -> Player:
         injury = Injury(area=tooltip.text.strip()) if tooltip else None,
     )
 
-def get_roster_raw(year: int, url: str, abbrev: str, force=False) -> str:
-    filename = ROSTER_TEAM_RAW_FORMAT.format(abbrev)
+def get_roster_raw(year: int, url: str, safe_abbrev: str, force=False) -> str:
+    filename = ROSTER_TEAM_RAW_FORMAT.format(safe_abbrev)
     return get_or_download_path(year, url, filename, force)

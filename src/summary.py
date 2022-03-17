@@ -1,15 +1,13 @@
 #!/usr/bin/env python
 
-from ctypes.wintypes import HENHMETAFILE
-from turtle import position
 import stats
 import roster
+import bracket
 
-from typing import Callable, Dict, List, Optional
+from typing import Callable, List, Optional
 
 from pydantic import BaseModel
 
-from bracket import Team
 from common import get_transform_typed
 
 SUMMARY_TEAM_FORMAT = 'summary/{}.json'
@@ -17,11 +15,11 @@ PLACEHOLDER_VALUE = '\u2014'
 INCHES_IN_FOOT = 12
 
 class PlayerInfo(BaseModel):
-    number: int
+    number: Optional[int]
     position: str
-    height: str
-    height_inches: int
-    weight_pounds: int
+    height: Optional[str]
+    height_inches: Optional[int]
+    weight_pounds: Optional[int]
     school_class: str
     hometown: Optional[str]
 
@@ -75,18 +73,18 @@ class Player(BaseModel):
     stats: Optional[PlayerStats]
 
 class Summary(BaseModel):
-    team: Team
+    team: bracket.Team
     players: List[Player]
 
 def get_summary_for_team(
         year: int, 
-        team: Team, 
+        team: bracket.Team, 
         roster: roster.RosterPage,
         stats: stats.StatsPage,
         force_transform=False, 
         force_fetch=False,
     ) -> Summary:
-    filename = SUMMARY_TEAM_FORMAT.format(team.abbrev)
+    filename = SUMMARY_TEAM_FORMAT.format(team.safe_abbrev)
     return get_transform_typed(
         year=year, 
         filename=filename,
@@ -98,7 +96,7 @@ def get_summary_for_team(
     )
 
 def get_info(
-        team: Team, 
+        team: bracket.Team, 
         roster: roster.RosterPage,
         stats: stats.StatsPage,
     ) -> Summary:
@@ -122,11 +120,11 @@ def get_player(
 def convert_stats(name: str, stats: stats.StatsPage) -> Optional[PlayerStats]:
     lookup = {t.name:t for t in stats.tables}
     scoring = lookup['Player Stats - Scoring']
-    input = next(filter(lambda row: row.player.name == name, scoring.rows), None)
-    if input is None:
+    overall = convert_overall_stats(name, scoring)
+    if overall is None:
         return None
     return PlayerStats(
-        overall = convert_overall_stats(name, scoring),
+        overall = overall,
         scoring = convert_scoring_stats(name, scoring),
         defense = convert_defense_stats(name, lookup['Player Stats - Defense']),
         assists = convert_assists_stats(name, lookup['Player Stats - Assists/Turnovers']),
@@ -139,10 +137,16 @@ def get_lookup_func(name: str, stats: stats.Table) -> Callable[[str], str]:
         return input.values[lookup[name]]
     return get_value
 
-def convert_overall_stats(name: str, stats: stats.Table) -> OverallStats:
+def convert_overall_stats(name: str, stats: stats.Table) -> Optional[OverallStats]:
+    input = next(filter(lambda row: row.player.name == name, stats.rows), None)
+    if input is None:
+        return None
     get_value = get_lookup_func(name, stats)
+    played = get_value('GP')
+    if played == PLACEHOLDER_VALUE:
+        return None
     return OverallStats(
-        games_played = get_value('GP'),
+        games_played = played,
         games_started = get_value('GS'),
     )
 
@@ -189,13 +193,13 @@ def convert_info(input: roster.PlayerRow, header: List[roster.HeaderColumn]) -> 
     lookup = {h.name:h.index for h in header}
     def get_value(name: str) -> str:
         return input.values[lookup[name]]
-    height = get_value('HT')
+    height = none_if_placeholder(get_value('HT'))
     return PlayerInfo(
-        number = get_value('NO'),
+        number = none_if_placeholder(get_value('NO')),
         position = get_value('POS'),
         height = height,
         height_inches = convert_height_to_inches(height),
-        weight_pounds = get_value('WT'),
+        weight_pounds = none_if_placeholder(get_value('WT')),
         school_class = get_value('CLASS'),
         hometown = none_if_placeholder(get_value('Hometown')),
     )
@@ -203,7 +207,9 @@ def convert_info(input: roster.PlayerRow, header: List[roster.HeaderColumn]) -> 
 def none_if_placeholder(input: str) -> Optional[str]:
     return None if input == PLACEHOLDER_VALUE else input
 
-def convert_height_to_inches(input: str) -> int:
+def convert_height_to_inches(input: Optional[str]) -> Optional[int]:
+    if input is None:
+        return None
     height, inches = input.split('-')
     return int(height)*INCHES_IN_FOOT + int(inches)
 

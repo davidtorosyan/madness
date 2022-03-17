@@ -42,12 +42,12 @@ def get_stats_for_team(
         force_transform=False, 
         force_fetch=False,
     ) -> StatsPage:
-    filename = STATS_TEAM_FORMAT.format(team.abbrev)
+    filename = STATS_TEAM_FORMAT.format(team.safe_abbrev)
     url = info.urls[team.index].stats
     return get_transform_typed(
         year=year, 
         filename=filename,
-        raw_func=lambda y,force=False: get_stats_raw(y, url, team.abbrev, force),
+        raw_func=lambda y,force=False: get_stats_raw(y, url, team.safe_abbrev, force),
         transform_func=parse_stats,
         load_func=StatsPage,
         force_transform=force_transform,
@@ -89,6 +89,6 @@ def parse_player(soup: BeautifulSoup) -> Player:
         position = soup.span.span.text.strip(),
     )
 
-def get_stats_raw(year: int, url: str, abbrev: str, force=False) -> str:
-    filename = STATS_TEAM_RAW_FORMAT.format(abbrev)
+def get_stats_raw(year: int, url: str, safe_abbrev: str, force=False) -> str:
+    filename = STATS_TEAM_RAW_FORMAT.format(safe_abbrev)
     return get_or_download_path(year, url, filename, force)

@@ -27,6 +27,7 @@ class Team(BaseModel):
     name: str
     abbrev: str
     seed: int
+    safe_abbrev: str
 
 class Match(BaseModel):
     index: int
@@ -77,11 +78,13 @@ def parse_matchup(soup, all_teams: List[Team]):
     )
 
 def parse_team(soup):
+    abbrev = soup.find(class_= 'abbrev').text
     return Team(
         index = soup.parent['data-slotindex'],
         name = soup.find(class_= 'name').text, 
-        abbrev = soup.find(class_= 'abbrev').text, 
+        abbrev = abbrev, 
         seed = soup.find(class_= 'seed').text,
+        safe_abbrev = abbrev.replace('/', '_')
     )
 
 def compute_next_match_index(index):
