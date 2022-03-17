@@ -26,9 +26,9 @@ class PlayerInfo(BaseModel):
 class OverallStats(BaseModel):
     games_played: int
     games_started: int
+    minutes_per_game: float
 
 class ScoringStats(BaseModel):
-    minutes_per_game: float
     points_per_game: float
     field_goals_made: int
     field_goals_attempted: int
@@ -148,12 +148,12 @@ def convert_overall_stats(name: str, stats: stats.Table) -> Optional[OverallStat
     return OverallStats(
         games_played = played,
         games_started = get_value('GS'),
+        minutes_per_game = get_value('MPG'),
     )
 
 def convert_scoring_stats(name: str, stats: stats.Table) -> ScoringStats:
     get_value = get_lookup_func(name, stats)
     return ScoringStats(
-        minutes_per_game = get_value('MPG'),
         points_per_game = get_value('PPG'),
         field_goals_made = get_value('FGM'),
         field_goals_attempted = get_value('FGA'),
